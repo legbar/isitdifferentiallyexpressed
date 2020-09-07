@@ -340,7 +340,7 @@ server <- function(input, output, session) {
     #This influences WGCNA results, because of the resulting matrix size
     basemean <- 10
     
-    files <- file.path("/home/ubuntu/isitdifferentiallyexpressed/input_data", meta()$code, "abundance.h5")
+    files <- file.path("/home/ubuntu/isitdifferentiallyexpressed/input_data/kallisto", meta()$code, "abundance.h5")
     names(files) <- meta()$name
     txi <- tximport(files, type = "kallisto", tx2gene = tx2gene, ignoreTxVersion = T)
     dds <- DESeqDataSetFromTximport(txi, colData = meta(), design = as.formula(paste0("~", paste(input$covariates_choice, input$comparison_choice, sep = " + "), collapse = " + ")))
