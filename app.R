@@ -9,7 +9,8 @@ library(plotly)
 library(cowplot)
 library(ggsci)
 
-meta_trap <- readRDS("data/meta_trap.rds")
+meta_trap <- readRDS("data/meta_trap.rds") %>%
+  filter(ip_pool == "n")
 setDT(meta_trap)
 tx2gene <- readRDS("data/tx2gene_trap.rds")
 
