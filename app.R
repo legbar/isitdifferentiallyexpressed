@@ -43,9 +43,10 @@ make_res_summary <- function (res, fdr) {
     summarise(Number = n())
 }
 
-header <- dashboardHeader(title = "isitdifferentiallyexpressed?")
+header <- dashboardHeader(title = "isitdifferentiallyexpressed?", 
+                          titleWidth = 300)
 
-sidebar <- dashboardSidebar(
+sidebar <- dashboardSidebar(width = 300,
   sidebarMenu(
     menuItem("How expressed is my gene?", tabName = "expression_check", icon = icon("check-circle")),
     menuItem("What does my gene do in ageing?", tabName = "ageing_check", icon = icon("check-circle")),
@@ -699,9 +700,9 @@ server <- function(input, output, session) {
     ageing_volcano_plot_function(res_pk1_age_ip_anno)
   })
   
-    output$results_plot <- renderPlot({
-         ageing_volcano_plot_function(res_kw_age_ip) 
-    })
+    # output$results_plot <- renderPlot({
+    #      ageing_volcano_plot_function(values$res) 
+    # })
   
 
     output$debugdiy <- renderPrint({
