@@ -8,10 +8,22 @@ library(IHW)
 library(plotly)
 library(cowplot)
 library(ggsci)
+library(ggrepel)
+library(ggbeeswarm)
 
-meta_trap <- readRDS("data/meta_trap.rds") %>%
-  filter(ip_pool == "n")
+
+meta_trap <- readRDS("data/meta_trap.rds")
+anno_mmus <- readRDS("data/anno_mmus.rds")
+counts_rank <- readRDS("data/counts_rank.rds")
+vsd_kw_all_ip <- readRDS("data/vsd_kw_all_ip.rds")
+vsd_pk1_ip_mb <- readRDS("data/vsd_pk1_ip_mb.rds")
+age_genes_common <- readRDS("data/age_genes_common.rds")
+res_kw_age_ip_anno <- readRDS("data/res_kw_age_ip_anno.rds")
+res_pk1_age_ip_anno <- readRDS("data/res_pk1_age_ip_anno.rds")
+
+setDT(counts_rank)
 setDT(meta_trap)
+
 tx2gene <- readRDS("data/tx2gene_trap.rds")
 
 #Custom functions
@@ -23,7 +35,6 @@ make_tidy <- function(x, first_column){
 #summarise res
 make_res_summary <- function (res, fdr) {
   res %>%
-    make_tidy("gene") %>%
     filter(padj < fdr) %>%
     mutate(Sign = ifelse(log2FoldChange > 0, "Upregulated", "Downregulated")) %>%
     group_by(Sign) %>%
@@ -34,8 +45,9 @@ header <- dashboardHeader(title = "isitdifferentiallyexpressed?")
 
 sidebar <- dashboardSidebar(
   sidebarMenu(
-    menuItem("Step 1: Choose the Dataset", tabName = "metadata_build", icon = icon("table")), 
-    menuItem("Step 2: Produce the Results", tabName = "results", icon = icon("check-circle"))
+    menuItem("How expressed is my gene?", tabName = "expression_check", icon = icon("check-circle")),
+    menuItem("What does my gene do in ageing?", tabName = "ageing_check", icon = icon("check-circle")),
+    menuItem("Custom Analysis", tabName = "metadata_build", icon = icon("table"))
   )
 )
  
@@ -148,21 +160,82 @@ sidebar <- dashboardSidebar(
     
     #NEXT PAGE
     tabItem(
-      tabName = "results", 
+      tabName = "expression_check", 
       fluidRow(
-        column(width = 3, 
-               box(title = "Introduction", 
+        column(width = 2, 
+               box(title = "Information", 
                    height = NULL, 
                    collapsible = FALSE, 
                    solidHeader = TRUE, 
                    status = "info", 
                    width = NULL, 
-                   p("This is the results page.")
-               )
-      )
+                   p("To find the level of expression of a gene of interest, type its name in the box below and click it or hit enter. To remove genes, click it and hit backspace.")), 
+               selectizeInput(inputId = "expression_choices",
+                              label = "Check Genes", 
+                              selected = c("Th", "Gfap"),
+                              multiple = TRUE, 
+                              choices = counts_rank$external_gene_name)
+      ), 
+      column(width = 6, 
+             box(title = "TRAP Expression Ranked", 
+                 plotOutput("counts_rank_plot"), 
+                 width = NULL, 
+                 solidHeader = TRUE), 
+             box(title = "Gene Information", 
+                 DT::dataTableOutput("counts_rank_table"), 
+                 width = NULL, 
+                 solidHeader = TRUE)), 
+      column(width = 4, 
+             box(title = "TRAP Status Distribution", 
+                 plotOutput("counts_rank_density"), 
+                 width = NULL, 
+                 solidHeader = TRUE), 
+             box(title = "Description", 
+                 height = NULL, 
+                 collapsible = FALSE, 
+                 solidHeader = FALSE, 
+                 status = "info", 
+                 width = NULL, 
+                 p("The above plot shows the distribution of counts for genes measured in TRAP. They are split into 3 categories based on their abundance in TRAP samples relative to a brain homogenate reference. There is considerable overlap between the categories, except for the most highly expressed genes."))
       )
     )
+    ), 
+    tabItem(
+      tabName = "ageing_check", 
+      fluidRow(
+        column(width = 2, 
+               selectizeInput(inputId = "ageing_gene_choices",
+                              label = "Check Genes", 
+                              selected = c("Syt1"),
+                              multiple = FALSE, 
+                              choices = anno_mmus[anno_mmus$ensembl_gene_id %in% age_genes_common, ]$external_gene_name)), 
+        column(width = 4,
+               box(title = "Cohort 1", 
+                   plotOutput("ageing_counts_plot_kw"), 
+                   width = NULL, 
+                   solidHeader = TRUE)), 
+        column(width = 4,
+               box(title = "Cohort 2", 
+                   plotOutput("ageing_counts_plot_pk1"), 
+                   width = NULL, 
+                   solidHeader = TRUE))
+              
+      ), 
+      fluidRow(
+        column(width = 4, 
+               offset = 2, 
+               box(title = NULL, 
+               plotOutput("ageing_volcano_plot_kw"), 
+               width = NULL, 
+               solidHeader = TRUE)), 
+        column(width = 4,
+               box(title = NULL, 
+                   plotOutput("ageing_volcano_plot_pk1"), 
+                   width = NULL, 
+                   solidHeader = TRUE))
+      )
     )
+  )
   )
 
 ui <- dashboardPage(header, 
@@ -341,10 +414,13 @@ server <- function(input, output, session) {
     #This influences WGCNA results, because of the resulting matrix size
     basemean <- 10
     
-    files <- file.path("/home/ubuntu/isitdifferentiallyexpressed/input_data/kallisto", meta()$code, "abundance.h5")
+    # files <- file.path("/home/ubuntu/isitdifferentiallyexpressed/input_data/kallisto", meta()$code, "abundance.h5")
+    files <- file.path("/zfs/analysis/thesis-pk/input_data/kallisto_PK1_KW2", meta()$code, "abundance.h5")
     names(files) <- meta()$name
     txi <- tximport(files, type = "kallisto", tx2gene = tx2gene, ignoreTxVersion = T)
+
     dds <- DESeqDataSetFromTximport(txi, colData = meta(), design = as.formula(paste0("~", paste(input$covariates_choice, input$comparison_choice, sep = " + "), collapse = " + ")))
+    dds[[input$comparison_choice]] <- relevel(dds[[input$comparison_choice]], input$denominator_choice)
     dds <- estimateSizeFactors(dds)
     keep_feature <- rowMeans(counts(dds, normalized = TRUE)) >= basemean
     dds_removed <- dds[!keep_feature, ]
@@ -352,6 +428,8 @@ server <- function(input, output, session) {
     dds <- DESeq(dds,
                  minReplicatesForReplace = Inf,
                  parallel = TRUE)
+    
+    print(resultsNames(dds))
 
     return(dds)
   })
@@ -379,6 +457,23 @@ server <- function(input, output, session) {
                    filterFun = get(filterfunction),
                    independentFiltering = independentfiltering,
                    parallel = TRUE)
+    
+    res_shrunken <- lfcShrink(values$dds,
+                              coef = paste(input$comparison_choice,
+                                           input$nominator_choice,
+                                           "vs",
+                                           input$denominator_choice, sep = "_"),
+                              type = "apeglm",
+                              lfcThreshold = lfc,
+                              res = res, quiet = T)
+
+    res$log2FoldChange <- res_shrunken$log2FoldChange
+    
+    res <- make_tidy(res, "gene") %>% 
+      mutate(significant = ifelse(padj < fdr, TRUE, FALSE), 
+             padj = -log10(padj)) %>% 
+      inner_join(anno_mmus, by = c("gene" = "ensembl_gene_id"))
+      
     return(res)
   })
   
@@ -418,24 +513,202 @@ server <- function(input, output, session) {
   
   output$results_plot <- renderPlotly({
     if(!is.null(values$res_summary)){
-      plot_ly(data = make_tidy(values$res, "gene") %>%
-                mutate(padj = -log10(padj))) %>% 
-        add_trace(x = ~padj, 
-                  y = ~log2FoldChange,
-                  type = "scattergl", 
-                  mode = "markers", 
-                  alpha = 0.3)
+      # plot_ly(data = values$res) %>%
+      #   add_trace(y = ~padj, 
+      #             x = ~log2FoldChange,
+      #             type = "scattergl", 
+      #             mode = "markers",
+      #             marker = list(size = 12), 
+      #             hoverinfo = "text", 
+      #             text = paste("Gene Name: ", values$res[["external_gene_name"]], "\n", 
+      #                          "Gene Type: ", values$res[["gene_biotype"]], 
+      #                          sep = ""),
+      #             alpha = 0.3) %>%
+      #   layout(showlegend = FALSE, 
+      #          )
+      
+      p <- ggplot(values$res, 
+             aes(x = log2FoldChange, 
+                 y = padj, 
+                 colour = significant, 
+                 label = external_gene_name, 
+                 text = paste("Gene Name: ", external_gene_name, sep = ""))) +
+        geom_point(alpha = 0.25, 
+                   size = 2) +
+        theme_cowplot(10) +
+        scale_color_d3() +
+        labs(x = "Log2 fold change",
+             y = "-Log<sub>10</sub> P adjusted value") +
+        theme(legend.position = "none")
+      fig <- ggplotly(p, tooltip = "text") %>%
+        toWebGL()
+      fig
       }
   })
+  
+  
+  output$counts_rank_plot <- renderPlot({
+    p <- ggplot(counts_rank, 
+             aes(x = rank, 
+                 y = count)) +
+      geom_point(aes(colour = trap_enrichment),
+                 alpha = 0.1, 
+                 position = position_jitter(h = 0.1, w = 0.1), size = 1) +
+      geom_hline(yintercept = 10, 
+                 linetype = "dotted") +
+      geom_text(aes(x = 1, 
+                    y = 10, 
+                    label = "Filtered", 
+                    vjust = -0.5), 
+                size = 6) +
+      geom_label_repel(data = subset(counts_rank, external_gene_name %in% input$expression_choices), 
+                       aes(x = rank, 
+                           y = count, 
+                           label = external_gene_name, 
+                           colour = trap_enrichment), 
+                       box.padding = 0.5, 
+                       force = 3, 
+                       key_glyph = "point", 
+                       fontface = "bold", 
+                       size = 8) +
+      scale_y_log10(breaks = c(0, 10, 100, 1000, 10000, 100000, 1000000)) +
+      labs(y = expression("Log"[10]~"Counts"), 
+           x = "Ranked Expression", 
+           colour = "TRAP Status") +
+      theme_cowplot() +
+      scale_x_continuous(trans = "reverse", limits = c(NA, 1)) +
+      scale_color_manual(values = c("Green", "Orange", "Red")) +
+      theme(legend.position = "top", 
+            legend.justification = c(0, 1))
+    
+    # fig <- ggplotly(p) %>%
+    #   toWebGL()
+    # fig
+    
+    p
+    
+  })
+  
+  output$counts_rank_density <- renderPlot({
+    p <- ggplot(counts_rank, 
+                aes(x = log10(count + 1), 
+                fill = trap_enrichment, 
+                colour = trap_enrichment)) +
+      geom_density(alpha = 0.5) +
+      geom_vline(data = subset(counts_rank, external_gene_name %in% input$expression_choices), 
+                 aes(xintercept = log10(count + 1), 
+                     colour = trap_enrichment), 
+                 linetype = "dotted") +
+      geom_text(data = subset(counts_rank, external_gene_name %in% input$expression_choices), 
+                aes(x = log10(count + 1), 
+                    y = Inf, 
+                    label = external_gene_name,
+                    colour = trap_enrichment), 
+                vjust = 1, 
+                hjust = -0.1, 
+                size = 3)  +
+      scale_color_manual(values = c("Green", "Orange", "Red")) +
+      scale_fill_manual(values = c("Green", "Orange", "Red")) +
+      theme_cowplot() +
+      theme(legend.position = "top") +
+      labs(colour = "", 
+           fill = "", 
+           x = expression("Log"[10]~"Counts"), 
+           y = "Density")
+      
+    p
+  })
+  
 
-  output$debugdiy <- renderPrint({
+  output$counts_rank_table <- DT::renderDataTable({
+    counts_rank %>%
+      filter(external_gene_name %in% input$expression_choices) %>%
+      select("Gene name" = external_gene_name, 
+             "Human Homolog" = hsapiens_homolog_associated_gene_name, 
+             "TRAP Status" = trap_enrichment,
+             "Rank Expression" = rank, 
+             "Description" = description) 
+    })
+  
+  ageing_counts_plot_function <- function(dds){
+    counts(dds, normalized = TRUE) %>%
+    make_tidy("gene") %>%
+    pivot_longer(-gene, names_to = "name", values_to = "count") %>%
+    inner_join(meta_trap, by = "name") %>%
+    inner_join(anno_mmus, by = c("gene" = "ensembl_gene_id")) %>%
+      mutate(age = recode(age, old = "Old", young = "Young")) %>%
+    filter(external_gene_name %in% input$ageing_gene_choices) %>%
+    ggplot(aes(x = age, 
+               y = count, 
+               # colour = age, 
+               fill = age)) +
+      geom_boxplot() +
+    geom_point(position = position_jitterdodge()) +
+    expand_limits(x = 0, y = 0) +
+    theme_cowplot() +
+    scale_color_d3() +
+      scale_fill_d3() +
+      labs(x = "Age", 
+           y = "Count", 
+           colour = "Age")
+  }
+  
+  output$ageing_counts_plot_kw <- renderPlot({
+    if(!is.null(input$ageing_gene_choices)){
+    ageing_counts_plot_function(dds_kw_age_ip)
+    }
+  })
+  
+  output$ageing_counts_plot_pk1 <- renderPlot({
+    if(!is.null(input$ageing_gene_choices)){
+    ageing_counts_plot_function(dds_pk1_age_ip)
+    }
+  })
+  
+  ageing_volcano_plot_function <- function(res_anno){
+    fdr < 0.05
+    p <- res_anno %>%
+      ggplot(aes(label = external_gene_name, 
+                 colour = ifelse(padj < fdr, TRUE, FALSE))) +
+      geom_point(aes(x = log2FoldChange, 
+                     y = -log10(padj)), 
+                 alpha = 0.25, 
+                 size = 2) +
+      geom_point(data = subset(res_anno, external_gene_name %in% input$ageing_gene_choices),
+                 aes(x = log2FoldChange, 
+                     y = -log10(padj)), 
+                 size = 3) +
+      geom_label_repel(data = subset(res_anno, external_gene_name %in% input$ageing_gene_choices),
+                       aes(x = log2FoldChange, 
+                           y = -log10(padj))) +
+      theme_cowplot() +
+      scale_color_d3() +
+      labs(x = "Log2 fold change",
+           y = "-Log<sub>10</sub> P adjusted value") +
+      theme(legend.position = "none")
+    
+    p
+  }
+  
+  output$ageing_volcano_plot_kw <- renderPlot({
+    ageing_volcano_plot_function(res_kw_age_ip_anno)
+  })
+  output$ageing_volcano_plot_pk1 <- renderPlot({
+    ageing_volcano_plot_function(res_pk1_age_ip_anno)
+  })
+  
+    output$results_plot <- renderPlot({
+         ageing_volcano_plot_function(res_kw_age_ip) 
+    })
+  
+
+    output$debugdiy <- renderPrint({
     if(!is.null(values$res)){
-      # print(values$dds_obj)
-      # print(design(values$dds_obj))
-      # print(resultsNames(values$dds_obj))
-      # print(input$comparison_choice)
-      # print(input$nominator_choice)
-      # print(input$denominator_choice)
+      print(values$dds)
+      print(resultsNames(values$dds))
+      print(input$comparison_choice)
+      print(input$nominator_choice)
+      print(input$denominator_choice)
       print(summary(values$res))
     }
   })
