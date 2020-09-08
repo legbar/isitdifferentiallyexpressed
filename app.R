@@ -28,8 +28,6 @@ setDT(meta_trap)
 
 tx2gene <- readRDS("data/tx2gene_trap.rds")
 
-fdr < 0.05
-
 #Custom functions
 #Make tidy data.frame
 make_tidy <- function(x, first_column){
@@ -670,10 +668,10 @@ server <- function(input, output, session) {
   })
   
   ageing_volcano_plot_function <- function(res_anno){
-    fdr < 0.05
-    p <- res_anno %>%
+
+        p <- res_anno %>%
       ggplot(aes(label = external_gene_name, 
-                 colour = ifelse(padj < fdr, TRUE, FALSE))) +
+                 colour = ifelse(padj < 0.05, TRUE, FALSE))) +
       geom_point(aes(x = log2FoldChange, 
                      y = -log10(padj)), 
                  alpha = 0.25, 
