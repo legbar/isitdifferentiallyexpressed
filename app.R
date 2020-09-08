@@ -28,6 +28,8 @@ setDT(meta_trap)
 
 tx2gene <- readRDS("data/tx2gene_trap.rds")
 
+fdr < 0.05
+
 #Custom functions
 #Make tidy data.frame
 make_tidy <- function(x, first_column){
