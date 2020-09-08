@@ -20,6 +20,8 @@ vsd_pk1_ip_mb <- readRDS("data/vsd_pk1_ip_mb.rds")
 age_genes_common <- readRDS("data/age_genes_common.rds")
 res_kw_age_ip_anno <- readRDS("data/res_kw_age_ip_anno.rds")
 res_pk1_age_ip_anno <- readRDS("data/res_pk1_age_ip_anno.rds")
+dds_kw_age_ip <- readRDS("data/dds_kw_age_ip.rds")
+dds_pk1_age_ip <- readRDS("data/dds_pk1_age_ip.rds")
 
 setDT(counts_rank)
 setDT(meta_trap)
