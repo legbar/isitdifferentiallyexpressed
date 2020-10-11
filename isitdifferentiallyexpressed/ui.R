@@ -1,4 +1,5 @@
 library(shiny)
+library(waiter)
 library(shinydashboard)
 library(DT)
 library(shinycssloaders)
@@ -29,7 +30,9 @@ sidebar <- dashboardSidebar(width = 175,
 body <- dashboardBody(
     tabItems(tabItem(
         tabName = "byDatasetTab",
-    fluidPage(fluidRow(column(
+    fluidPage(use_waiter(),
+              waiter_show_on_load(html = spin_fading_circles()), # place at the top before content
+              fluidRow(column(
         width = 3,
         box(
             title = "Select Data", 

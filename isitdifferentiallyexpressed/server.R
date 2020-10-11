@@ -214,5 +214,5 @@ shinyServer(function(input, output, session) {
                            "Mean counts" = baseMean)}, options = list(dom = 't'), rownames = FALSE)
         })
 
-    
+    waiter_hide()
 })
