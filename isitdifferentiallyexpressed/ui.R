@@ -30,8 +30,9 @@ sidebar <- dashboardSidebar(width = 175,
 body <- dashboardBody(
     tabItems(tabItem(
         tabName = "byDatasetTab",
-    fluidPage(use_waiter(),
-              waiter_show_on_load(html = spin_fading_circles()), # place at the top before content
+    fluidPage(tags$head(includeScript("google-analytics.html")), # google analytics
+              use_waiter(), # waiter init
+              waiter_show_on_load(html = spin_fading_circles()), # waiter loading screen
               fluidRow(column(
         width = 3,
         box(
