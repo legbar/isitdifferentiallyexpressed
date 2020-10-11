@@ -71,14 +71,15 @@ body <- dashboardBody(
             title = "Results Table", 
             tagList(
                 tags$div(class="header", checked=NA,
-                         tags$b("Click a row to plot expression")),
+                         tags$b("Click a row to plot expression"), 
+                         tags$br(" ")),
                 shinycssloaders::withSpinner(DT::dataTableOutput("results_table"))
             ),
             width = TRUE, 
             solidHeader = TRUE
         ), 
         box(
-            title = "Scatter Plot",
+            title = "Expression Plot",
             plotOutput("scatterPlot"),
             width = TRUE,
             solidHeader = TRUE
