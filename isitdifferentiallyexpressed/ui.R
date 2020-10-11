@@ -70,6 +70,8 @@ body <- dashboardBody(
         box(
             title = "Results Table", 
             tagList(
+                tags$div(class="header", checked=NA,
+                         tags$b("Click a row to plot expression")),
                 shinycssloaders::withSpinner(DT::dataTableOutput("results_table"))
             ),
             width = TRUE, 
