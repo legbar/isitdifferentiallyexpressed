@@ -206,10 +206,12 @@ shinyServer(function(input, output, session) {
         DT::renderDataTable({
             datatable({byGene_reactives()[[3]] %>%
                     mutate(log2FoldChange = signif(log2FoldChange, 3), 
+                           pvalue = signif(pvalue, 3),
                            padj = signif(padj, 3), 
                            baseMean = signif(baseMean, 3)) %>%
                     select("Gene" = external_gene_name, 
                            "Log 2 Fold Change" = log2FoldChange, 
+                           "Raw P" = pvalue,
                            "Adjusted P" = padj, 
                            "Mean counts" = baseMean)}, options = list(dom = 't'), rownames = FALSE)
         })
