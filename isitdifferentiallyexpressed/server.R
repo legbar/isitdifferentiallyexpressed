@@ -153,47 +153,62 @@ shinyServer(function(input, output, session) {
             if (str_detect(input$byGene_comparison_select, "SNCA")) {
                 return(list("dds_snca", 
                             counts(dds_snca, normalized = TRUE)[anno_human[which(anno_human$external_gene_name == input$byGene_gene_select),]$ensembl_gene_id,], 
-                            results_list[["dds_snca"]][[sub(".*? ", "", input$byGene_comparison_select)]] %>% filter(external_gene_name == input$byGene_gene_select)))
+                            results_list[["dds_snca"]][[sub(".*? ", "", input$byGene_comparison_select)]] %>% filter(external_gene_name == input$byGene_gene_select), 
+                            assay(vst(dds_snca))[anno_human[which(anno_human$external_gene_name == input$byGene_gene_select),]$ensembl_gene_id,]))
             }
             if (str_detect(input$byGene_comparison_select, "LRRK2")) {
                 return(list("dds_lrrk2", 
                             counts(dds_lrrk2, normalized = TRUE)[anno_human[which(anno_human$external_gene_name == input$byGene_gene_select),]$ensembl_gene_id,], 
-                            results_list[["dds_lrrk2"]][[sub(".*? ", "", input$byGene_comparison_select)]] %>% filter(external_gene_name == input$byGene_gene_select)))
+                            results_list[["dds_lrrk2"]][[sub(".*? ", "", input$byGene_comparison_select)]] %>% filter(external_gene_name == input$byGene_gene_select), 
+                            assay(vst(dds_lrrk2))[anno_human[which(anno_human$external_gene_name == input$byGene_gene_select),]$ensembl_gene_id,]))
             }
             if (str_detect(input$byGene_comparison_select, "GBA")) {
                 return(list("dds_gba", 
                             counts(dds_gba, normalized = TRUE)[anno_human[which(anno_human$external_gene_name == input$byGene_gene_select),]$ensembl_gene_id,], 
-                            results_list[["dds_gba"]][[sub(".*? ", "", input$byGene_comparison_select)]] %>% filter(external_gene_name == input$byGene_gene_select)))
+                            results_list[["dds_gba"]][[sub(".*? ", "", input$byGene_comparison_select)]] %>% filter(external_gene_name == input$byGene_gene_select), 
+                            assay(vst(dds_lrrk2))[anno_human[which(anno_human$external_gene_name == input$byGene_gene_select),]$ensembl_gene_id,]))
             }
         }
     })
     
     output$byGene_scatterPlot <- renderPlot({
         req(byGene_reactives())
-
-        g_byGene <- ggplot({
-            byGene_reactives()[[2]] %>%
-                as_tibble(rownames = "Name") %>%
-                inner_join(as_tibble(colData(eval(parse(text = byGene_reactives()[[1]])))), by = "Name")
-        },
-        aes(
-            x = eval(parse(text = comparison_dictionary[[byGene_reactives()[[1]]]][["byGene_meta_column"]][[input$byGene_comparison_select]])),
-            y = value,
-            colour = eval(parse(text = comparison_dictionary[[byGene_reactives()[[1]]]][["byGene_meta_column"]][[input$byGene_comparison_select]])))) +
-            theme_cowplot() +
-            labs(colour = comparison_dictionary[[byGene_reactives()[[1]]]][["byGene_meta_column"]][[input$byGene_comparison_select]],
-                 x = comparison_dictionary[[byGene_reactives()[[1]]]][["byGene_meta_column"]][[input$byGene_comparison_select]],
-                 y = "Count") +
-            scale_y_continuous(limits = c(1, NA))
-
-        if (str_detect(input$byGene_comparison_select, "vs")) {
-            g_byGene + 
-                geom_boxplot() +
-                geom_point()
-        } else {
-            g_byGene +
-                geom_point()
+        
+        generate_ggplot <- function(count_data){
+            g <- as_tibble(count_data, rownames = "Name") %>%
+                inner_join(as_tibble(colData(eval(parse(text = byGene_reactives()[[1]])))), by = "Name") %>%
+                ggplot(
+                    aes(
+                        x = eval(parse(text = comparison_dictionary[[byGene_reactives()[[1]]]][["byGene_meta_column"]][[input$byGene_comparison_select]])),
+                        y = value,
+                        colour = eval(parse(text = comparison_dictionary[[byGene_reactives()[[1]]]][["byGene_meta_column"]][[input$byGene_comparison_select]])))) +
+                theme_cowplot() +
+                labs(colour = comparison_dictionary[[byGene_reactives()[[1]]]][["byGene_meta_column"]][[input$byGene_comparison_select]],
+                     x = comparison_dictionary[[byGene_reactives()[[1]]]][["byGene_meta_column"]][[input$byGene_comparison_select]])
+            return(g)
         }
+        
+        if (str_detect(input$byGene_comparison_select, "vs")) {
+            byGene_reactives()[[2]] %>%
+             generate_ggplot() + 
+                geom_boxplot() +
+                geom_point() +
+                labs(y = "Count") +
+                scale_y_continuous(limits = c(1, NA))
+        } else {
+            byGene_reactives()[[4]] %>%
+                generate_ggplot() + 
+                geom_point() +
+                labs(y = "Log2 Count") +
+                # geom_smooth(method = "lm", se = F) +
+                stat_smooth(method = "lm") +
+                stat_regline_equation(aes(label = paste(..rr.label..)))
+        }
+        
+        
+
+        
+                
 
     })
     

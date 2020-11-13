@@ -10,6 +10,8 @@ library(IHW)
 library(DESeq2)
 library(tidyverse)
 
+library(ggpubr)
+
 # Define UI for application that draws a histogram
 header <- dashboardHeader(title = "Is it differentially expressed?",
                           titleWidth = 300)
