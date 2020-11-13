@@ -71,19 +71,24 @@ shinyServer(function(input, output, session) {
                     "Downregulated"
                 ),
                 # Significant = ifelse(padj < input$alpha_select, "Significant", "NS"),
-                padj = signif(padj, 3),
-                log2FoldChange = signif(log2FoldChange, 3),
+                log2FoldChange = signif(log2FoldChange, 3), 
+                lfcSE = signif(lfcSE, 3),
+                pvalue = signif(pvalue, 3),
+                padj = signif(padj, 3), 
                 baseMean = signif(baseMean, 5)
             ) %>%
             select(
-                "Gene" = external_gene_name,
-                "Log 2 Fold Change" = log2FoldChange,
-                "Adjusted P value" = padj,
+                "Gene" = external_gene_name, 
+                "Log<sub>2</sub> Fold Change" = log2FoldChange, 
+                "Log<sub>2</sub> Fold Change Standard Error" = lfcSE,
+                "Raw P" = pvalue,
+                "Adjusted P" = padj, 
                 "Mean counts" = baseMean,
                 "Description" = description
             )
     },
     rownames = FALSE,
+    escape = FALSE,
     selection = "single")
     
     gene_select <- reactive({
@@ -221,14 +226,16 @@ shinyServer(function(input, output, session) {
         DT::renderDataTable({
             datatable({byGene_reactives()[[3]] %>%
                     mutate(log2FoldChange = signif(log2FoldChange, 3), 
+                           lfcSE = signif(lfcSE, 3),
                            pvalue = signif(pvalue, 3),
                            padj = signif(padj, 3), 
                            baseMean = signif(baseMean, 3)) %>%
                     select("Gene" = external_gene_name, 
-                           "Log 2 Fold Change" = log2FoldChange, 
+                           "Log<sub>2</sub> Fold Change" = log2FoldChange, 
+                           "Log<sub>2</sub> Fold Change Standard Error" = lfcSE,
                            "Raw P" = pvalue,
                            "Adjusted P" = padj, 
-                           "Mean counts" = baseMean)}, options = list(dom = 't'), rownames = FALSE)
+                           "Mean counts" = baseMean)}, options = list(dom = 't'), rownames = FALSE, escape = FALSE)
         })
 
     waiter_hide()
