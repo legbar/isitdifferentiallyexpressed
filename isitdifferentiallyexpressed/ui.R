@@ -135,6 +135,14 @@ tabItem(
                     inputId = "byGene_comparison_select", 
                     label = "Show expression plot", 
                     choices = NULL
+                ),
+                conditionalPanel(
+                    condition = "input.byGene_comparison_select == 'SNCA Ageing'", 
+                    checkboxInput(
+                        inputId = "brent_mode", 
+                        label = "Brent mode", 
+                        value = TRUE
+                    )
                 ), 
                 plotOutput(
                     "byGene_scatterPlot"

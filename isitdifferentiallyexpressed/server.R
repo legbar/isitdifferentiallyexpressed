@@ -201,13 +201,21 @@ shinyServer(function(input, output, session) {
                 labs(y = "Count") +
                 scale_y_continuous(limits = c(1, NA))
         } else {
-            byGene_reactives()[[4]] %>%
-                generate_ggplot() + 
-                geom_point() +
-                labs(y = "Log2 Count") +
-                # geom_smooth(method = "lm", se = F) +
-                stat_smooth(method = "lm") +
-                stat_regline_equation(aes(label = paste(..rr.label..)))
+            if(input$brent_mode == TRUE){
+                byGene_reactives()[[4]] %>%
+                    generate_ggplot() + 
+                    geom_point() +
+                    labs(y = "Log2 Count") +
+                    # geom_smooth(method = "lm", se = F) +
+                    stat_smooth(method = "lm", se = F) +
+                    stat_regline_equation(aes(label = paste(..rr.label..)))
+            } else {
+                byGene_reactives()[[2]] %>%
+                    generate_ggplot() + 
+                    geom_point() +
+                    labs(y = "Count")
+            }
+            
         }
         
         
