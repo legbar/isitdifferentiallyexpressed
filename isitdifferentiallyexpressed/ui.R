@@ -59,8 +59,8 @@ body <- dashboardBody(
                     label = "Filter genes below count value",
                     value = 100, 
                     min = 0, 
-                    max = 200, 
-                    step = 10
+                    max = 1000, 
+                    step = 25
                 ), 
                 checkboxInput(
                     inputId = "signif_only", 
@@ -160,14 +160,14 @@ tabItem(
                     label = "Show expression plot", 
                     choices = NULL
                 ),
-                conditionalPanel(
-                    condition = "input.byGene_comparison_select == 'SNCA Ageing'", 
-                    checkboxInput(
-                        inputId = "brent_mode", 
-                        label = "Brent mode", 
-                        value = TRUE
-                    )
-                ), 
+                # conditionalPanel(
+                #     condition = "input.byGene_comparison_select == 'SNCA Ageing'", 
+                #     checkboxInput(
+                #         inputId = "brent_mode", 
+                #         label = "Brent mode", 
+                #         value = TRUE
+                #     )
+                # ), 
                 # textOutput(outputId = "byGene_debug"),
                 plotOutput(
                     "byGene_scatterPlot"

@@ -173,10 +173,7 @@ shinyServer(function(input, output, session) {
 
     })
     
-    # output$debug <- ({
-    #     renderPrint({
-    #     })
-    # })
+    
     
     # step 1. a gene (human or mouse) gets chosen
     updateSelectizeInput(session, 
@@ -375,19 +372,25 @@ observe({
 
 
 
-
-    byGene_counts <- reactive({
-      req(byGene_dds())
+    selected_gene <- reactive({
       req(active_mouse_gene(), active_human_gene())
-      
-
       if (str_detect(input$byGene_comparison_select, "TRAP")){
         selected_gene <- anno_mouse[anno_mouse$external_gene_name == active_mouse_gene(),]$ensembl_gene_id
       } else {
         selected_gene <- anno_human[anno_human$external_gene_name == active_human_gene(),]$ensembl_gene_id
       }
+      
+      
+    })
+      
+    byGene_counts <- reactive({
+      req(byGene_dds())
+      req(active_mouse_gene(), active_human_gene())
+      
 
-      counts(byGene_dds(), normalized = TRUE)[rownames(byGene_dds()) == selected_gene, ] %>%
+  
+
+      counts(byGene_dds(), normalized = TRUE)[rownames(byGene_dds()) == selected_gene(), ] %>%
         as_tibble(rownames = "Name") %>%
         inner_join(colData(byGene_dds()), copy = TRUE)
     })
@@ -418,6 +421,31 @@ observe({
       }
 
     })
+    
+    # output$debug <- ({
+    #     renderPrint({
+    #       selected_gene()
+    #     })
+    # })
+    
+    output$byGene_resultTable <-
+      DT::renderDataTable({
+      req(byGene_counts())
+        datatable({results_list[[comparison_to_dds[comparison_to_dds$name == input$byGene_comparison_select,]$dds]][[sub(".*? ", "", input$byGene_comparison_select)]] %>%
+            filter(ensembl_gene_id == selected_gene()) %>%
+            mutate(log2FoldChange = signif(log2FoldChange, 3),
+                   lfcSE = signif(lfcSE, 3),
+                   pvalue = signif(pvalue, 3),
+                   padj = signif(padj, 3),
+                   baseMean = signif(baseMean, 3)) %>%
+            select("Gene" = external_gene_name,
+                   "Log<sub>2</sub> Fold Change" = log2FoldChange,
+                   "Log<sub>2</sub> Fold Change Standard Error" = lfcSE,
+                   "Raw P" = pvalue,
+                   "Adjusted P" = padj,
+                   "Mean counts" = baseMean)}, options = list(dom = 't'), rownames = FALSE, escape = FALSE)
+      })
+    
 # 
 #     byGene_reactives <- reactive({
 #         {
@@ -502,21 +530,7 @@ observe({
   
   
     
-    # output$byGene_resultTable <-
-    #     DT::renderDataTable({
-    #         datatable({byGene_reactives()[[3]] %>%
-    #                 mutate(log2FoldChange = signif(log2FoldChange, 3), 
-    #                        lfcSE = signif(lfcSE, 3),
-    #                        pvalue = signif(pvalue, 3),
-    #                        padj = signif(padj, 3), 
-    #                        baseMean = signif(baseMean, 3)) %>%
-    #                 select("Gene" = external_gene_name, 
-    #                        "Log<sub>2</sub> Fold Change" = log2FoldChange, 
-    #                        "Log<sub>2</sub> Fold Change Standard Error" = lfcSE,
-    #                        "Raw P" = pvalue,
-    #                        "Adjusted P" = padj, 
-    #                        "Mean counts" = baseMean)}, options = list(dom = 't'), rownames = FALSE, escape = FALSE)
-    #     })
+
 
     waiter_hide()
 })
