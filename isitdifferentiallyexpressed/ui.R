@@ -45,7 +45,9 @@ body <- dashboardBody(
                     label = "Select dataset", 
                     choices = c("SNCA A53T and Triplication" = "dds_snca", 
                                 "GBA N370S" = "dds_gba", 
-                                "LRRK2 G2019S" = "dds_lrrk2")
+                                "LRRK2 G2019S" = "dds_lrrk2", 
+                                "TRAP Enrichment" = "dds_TRAP_ALL", 
+                                "TRAP Age/Genotype/Region" = "dds_TRAP_IP")
                 ),
                 selectizeInput(
                     inputId = "comparison_select", 
@@ -55,7 +57,7 @@ body <- dashboardBody(
                 sliderInput(
                     inputId = "baseMean_select", 
                     label = "Filter genes below count value",
-                    value = 10, 
+                    value = 100, 
                     min = 0, 
                     max = 200, 
                     step = 10
@@ -114,12 +116,34 @@ tabItem(
     column(
         width = 3, 
         box(
-            title = "Summary of expression", 
+            title = "Human comparisons", 
             width = TRUE, 
             solidHeader = TRUE, 
             tagList(
-               htmlOutput(
-                    outputId = "signif_check"
+                uiOutput("human_homolog_select"),
+                htmlOutput(
+                    outputId = "signif_check_human"
+                )
+            )
+        ),
+        box(
+            title = "Mouse expression", 
+            width = TRUE, 
+            solidHeader = TRUE, 
+            tagList(
+                uiOutput("mouse_homolog_select"),
+                htmlOutput(
+                    outputId = "enrichment_check_mouse"
+                )
+            )
+        ),
+        box(
+            title = "Mouse comparisons", 
+            width = TRUE, 
+            solidHeader = TRUE, 
+            tagList(
+                htmlOutput(
+                    outputId = "signif_check_mouse"
                 )
             )
         )
@@ -144,6 +168,7 @@ tabItem(
                         value = TRUE
                     )
                 ), 
+                textOutput(outputId = "byGene_debug"),
                 plotOutput(
                     "byGene_scatterPlot"
                     ), 
