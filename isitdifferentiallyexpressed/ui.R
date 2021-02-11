@@ -168,7 +168,7 @@ tabItem(
                         value = TRUE
                     )
                 ), 
-                textOutput(outputId = "byGene_debug"),
+                # textOutput(outputId = "byGene_debug"),
                 plotOutput(
                     "byGene_scatterPlot"
                     ), 
