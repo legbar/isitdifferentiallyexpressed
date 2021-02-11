@@ -48,12 +48,17 @@ human_to_mouse <- readRDS(
     "/zfs/analysis/isitdifferentiallyexpressed_objectCreation/output/human_to_mouse.rds"
 ) %>%
     distinct() %>%
-    rename("homolog" = "mmusculus_homolog_associated_gene_name")
+    rename("homolog" = "mmusculus_homolog_associated_gene_name") %>%
+  add_row(external_gene_name = "S100B", 
+          homolog = "S100b")
+
 mouse_to_human <- readRDS(
     "/zfs/analysis/isitdifferentiallyexpressed_objectCreation/output/mouse_to_human.rds"
 ) %>%
     distinct()  %>%
-    rename("homolog" = "hsapiens_homolog_associated_gene_name")
+    rename("homolog" = "hsapiens_homolog_associated_gene_name") %>%
+  add_row(external_gene_name = "S100b", 
+          homolog = "S100B")
 
 enrich_summary <- readRDS(
     "/zfs/analysis/isitdifferentiallyexpressed_objectCreation/output/enrich_summary.rds"
